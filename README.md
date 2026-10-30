@@ -1,3 +1,5 @@
+![Banner](banner.png)
+
 # file-signature-validator
 Verifies digital signatures of files against a provided public key or certificate, ensuring authenticity and integrity. - Focused on File operations and analysis
 
