@@ -60,6 +60,11 @@ def verify_signature(file_path, signature_file, public_key, hash_algorithm, open
             raise FileNotFoundError(f"Public key/certificate file not found: {public_key}")
 
         # Construct the openssl command
+        # dgst -verify wants a raw public key in PEM form. The argument is
+        # named public key or certificate, but a certificate file passed as is
+        # fails verification here; the key has to be extracted from it first.
+        # The command is an argv list, so none of the three paths is ever shell
+        # interpreted.
         cmd = [
             openssl_path,
             "dgst",
@@ -76,6 +81,13 @@ def verify_signature(file_path, signature_file, public_key, hash_algorithm, open
         stdout, stderr = process.communicate()
 
         # Check the return code
+        # Two conditions, not one: the exit code has to be 0 and the literal
+        # text Verified OK has to appear in stdout. openssl's wording has
+        # varied across versions and builds, so the text test can fail a
+        # signature openssl actually accepted, and I accept that strictness
+        # over trusting an exit code alone. The output is decoded with the
+        # default strict errors, so non UTF-8 output raises and lands in the
+        # generic handler as a failure too.
         if process.returncode == 0:
             # Check the output for "Verified OK"
             if "Verified OK" in stdout.decode():
@@ -106,6 +118,10 @@ def main():
     if verify_signature(args.file_path, args.signature_file, args.public_key, args.hash_algorithm, args.openssl_path):
         print("Signature is valid.")
     else:
+        # Every failure prints the same invalid line: a bad signature, a
+        # missing file, and openssl not being installed at all are
+        # indistinguishable from the output and the exit code. The log holds
+        # the reason; the verdict line does not.
         print("Signature is invalid.")
         sys.exit(1)  # Exit with an error code
 
